@@ -32,7 +32,7 @@ if ($contentType === "application/json") {
         $dataSub_a = $friend_relation->get_friend_request_single($decoded['emailS1'], $decoded['emailS2']);
         $dataSub_b = $friend_relation->get_friend_request_single($decoded['emailS2'], $decoded['emailS1']);
 
-        if (empty($dataSub_a)){
+        if (empty($dataSub_a)) {
             $dataSub_a = array(
                 'FriendRelation' => array(
                     'user_account_1' => $decoded['emailS1'],
@@ -79,32 +79,44 @@ if ($contentType === "application/json") {
         $dataSub['FriendRelation']['modified'] = date('Y-m-d H:i:s');
 
         if (strcmp($user->login_code($decoded['emailS1']), $decoded['codeS']) == 0 && $user->is_admin($decoded['emailS1']) == false) {
+            if ($command == 0) {
+                $friend_relation->deleteById($dataSub_a['FriendRelation']['id'] ?? 0); 
+                $response = array(
+                    'id' => 1,
+                    'code' => "REQUEST_CREATE_OK",
+                );
+                $friend_relation->sendResponse(200, json_encode($response));
 
-            //echo json_encode($dataSub);
-            if ($friend_relation->save($dataSub_a) && $friend_relation->save($dataSub_b)) {
-                $lastest_id = $friend_relation->getNextId();
-                if ($notification->save($dataSub2)) {
-                    $response = array(
-                        'id' => 1,
-                        'code' => "REQUEST_CREATE_OK",
-                    );
-                    $friend_relation->sendResponse(200, json_encode($response));
+            } else if ($command == 1) {
+                //echo json_encode($dataSub);
+                if ($friend_relation->save($dataSub_a) && $friend_relation->save($dataSub_b)) {
+                    if ($command == 0) {
+                        $friend_relation->save($dataSub_a);
+                        $friend_relation->save($dataSub_b);
+                    }
+                    if ($notification->save($dataSub2)) {
+                        $response = array(
+                            'id' => 1,
+                            'code' => "REQUEST_CREATE_OK",
+                        );
+                        $friend_relation->sendResponse(200, json_encode($response));
+                    } else {
+                        //$dataSub_a['FriendRelation']['type'] = 0;
+                        //$friend_relation->save($dataSub);
+                        $response = array(
+                            'id' => 1,
+                            'code' => "REQUEST_CREATE_FAIL",
+                        );
+                        $friend_relation->sendResponse(200, json_encode($response));
+                    }
                 } else {
-                    //$dataSub_a['FriendRelation']['type'] = 0;
-                    //$friend_relation->save($dataSub);
+                    //header('Location: ' . CLIENT_URL . '/book/input?success=0');}
                     $response = array(
-                        'id' => 1,
+                        'id' => 0,
                         'code' => "REQUEST_CREATE_FAIL",
                     );
                     $friend_relation->sendResponse(200, json_encode($response));
                 }
-            } else {
-                //header('Location: ' . CLIENT_URL . '/book/input?success=0');}
-                $response = array(
-                    'id' => 0,
-                    'code' => "REQUEST_CREATE_FAIL",
-                );
-                $friend_relation->sendResponse(200, json_encode($response));
             }
         } else {
             //header('Location: ' . CLIENT_URL . '/book/input?success=0');
